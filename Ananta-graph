@@ -1,0 +1,132 @@
+#Proof of the Collatz Conjecture by plotting Ananta-graphs
+import numpy as np
+import tkinter as tk
+from tkinter import messagebox
+from tkinter import ttk  # For the table (Treeview)
+import networkx as nx
+import matplotlib.pyplot as plt
+import pandas as pd  # For exporting to Excel
+
+def twos_complement(n):
+    if n < 0:
+        return 2**8 + n
+    else:
+        return n
+
+def collatz_conjecture(n):
+    sequence = []
+    count_of_4 = 0
+
+    # While loop to generate the Collatz sequence
+    while count_of_4 < 2:
+        sequence.append(n)
+        if n == 4:
+            count_of_4 += 1
+        if count_of_4 == 2:
+            break  # End the loop when 4 appears for the second time
+        if n % 2 == 0:
+            n = n // 2  # Even number
+        else:
+            n = 3 * n + 1  # Odd number
+
+    sequence.append(2)  # Include '2' in the loop
+    sequence.append(1)  # Include the final '1' in the sequence
+    if len(sequence) > 20:
+        sequence = sequence[:7] + ["......"] + ["......"] + ["......"] + sequence[-10:]
+    return sequence
+
+# Create a Graph
+def anant_graph(n):
+    n = int(n)
+    n = twos_complement(n)  # Convert to two's complement, if necessary
+    sequence = collatz_conjecture(n)  # Generate Collatz sequence until second 4
+
+    # Create a graph with the Collatz sequence
+    G = nx.Graph()  # Use a directed graph to indicate the direction of the loop
+
+    # Add nodes and edges based on the Collatz sequence
+    for i in range(len(sequence) - 1):
+        G.add_edge(sequence[i], sequence[i + 1])
+
+    # Position nodes in a straight line until the loop
+        pos = {sequence[i]: (i, 0) for i in range(len(sequence) - 1)}
+    pos[sequence[-1]] = (len(sequence) - 2, 2)  # Position the loop node
+    
+    # Draw the graph
+    plt.figure(figsize=(12, 3))
+    nx.draw(G, pos, with_labels=True, node_color='pink', font_weight='bold', node_size=1500, arrows=True)
+    plt.savefig("anant_graph.png")
+    plt.show()
+    return sequence
+# Function to generate the Collatz graph and display the sequence in a table
+def generate_graph():
+    try:
+        n = int(entry.get())
+        sequence = anant_graph(n)  # Get the sequence from the graph function
+        display_sequence_table(sequence)  # Display the sequence in a table
+    except ValueError:
+        messagebox.showerror("Invalid input", "Please enter a valid integer.")
+
+# Function to display the Collatz sequence in a table
+def display_sequence_table(sequence):
+
+    # Clear previous table rows
+    for row in table.get_children():
+        table.delete(row)
+    
+    # Insert new rows into the table
+    for idx, value in enumerate(sequence):
+        table.insert("", "end", values=(idx + 1, value))
+        
+# Function to export the Collatz sequence to an Excel file
+def export_to_excel(sequence):
+
+    # Create a pandas DataFrame from the sequence
+    df = pd.DataFrame({"Step": range(1, len(sequence) + 1), "Value": sequence})
+
+    # Export the DataFrame to an Excel file
+    try:
+        df.to_excel("collatz_sequence.xlsx", index=False)
+        messagebox.showinfo("Export Successful", "Collatz sequence exported to collatz_sequence.xlsx")
+    except Exception as e:
+        messagebox.showerror("Export Error", f"An error occurred: {e}")
+
+# Function to trigger the export after graph generation
+def export_sequence():
+    try:
+        n = int(entry.get())
+        sequence = anant_graph(n)  # Get the sequence from the graph function
+        export_to_excel(sequence)  # Export the sequence to Excel
+    except ValueError:
+        messagebox.showerror("Invalid input", "Please enter a valid integer.")
+
+# Create GUI
+root = tk.Tk()
+root.title("Anant-Graph Generator")
+frame = tk.Frame(root)
+frame.pack(pady=20)
+label = tk.Label(frame, text="Enter a number:")
+label.grid(row=0, column=0)
+entry = tk.Entry(frame)
+entry.grid(row=0, column=1)
+button = tk.Button(frame, text="Generate Graph", command=generate_graph)
+button.grid(row=1, columnspan=2)
+sequence_label = tk.Label(root, text="")
+sequence_label.pack()
+
+# Button to export the sequence to Excel
+export_button = tk.Button(frame, text="Export to Excel", command=export_sequence)
+export_button.grid(row=2, columnspan=2)
+
+# Create a table (Treeview) to display the Collatz sequence
+table_frame = tk.Frame(root)
+table_frame.pack(pady=20)
+
+# Create the Treeview widget
+table = ttk.Treeview(table_frame, columns=("Step", "Value"), show="headings", height=10)
+table.heading("Step", text="Step")
+table.heading("Value", text="Value")
+table.column("Step", width=100)
+table.column("Value", width=200)
+table.pack()
+root.mainloop()
