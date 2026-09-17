@@ -1,0 +1,149 @@
+#Symmetric Key Encryption Using Modular Traversal of Ananta-Graphs
+import tkinter as tk
+from tkinter import messagebox
+
+# Function to check if a number is prime
+def is_prime(n):
+    if n < 2:
+        return False
+    for i in range(2, int(n**0.5) + 1):
+        if n % i == 0:
+            return False
+    return True
+
+# Define the transformation function f(n)
+def f(n, mod):
+    return (3 * n + 1) % mod
+
+# Function to perform iterative traversal
+def traverse(n, steps, mod):
+    for _ in range(steps):
+        n = f(n, mod)
+    return n
+
+# Encrypt message using shared key
+def encrypt_message():
+    try:
+        message = entry_message.get()
+        if not message:
+            messagebox.showerror("Input Error", "Please enter a message to encrypt!")
+            return
+
+        shared_key = int(label_shared_key_value.cget("text"))
+
+        # Encrypt each character using XOR
+        encrypted_text = ''.join(chr((ord(char) ^ shared_key) % 256) for char in message)
+
+        label_encrypted_value.config(text=encrypted_text)
+
+    except ValueError:
+        messagebox.showerror("Encryption Error", "Invalid key or message input!")
+
+# Decrypt message using shared key
+def decrypt_message():
+    try:
+        encrypted_text = label_encrypted_value.cget("text")
+        if encrypted_text == "-":
+            messagebox.showerror("Decryption Error", "No encrypted message found!")
+            return
+
+        shared_key = int(label_shared_key_value.cget("text"))
+
+        # Correctly reverse the XOR operation
+        decrypted_text = ''.join(chr((ord(char) ^ shared_key) % 256) for char in encrypted_text)
+
+        label_decrypted_value.config(text=decrypted_text)
+
+    except Exception as e:
+        messagebox.showerror("Decryption Error", f"Error: {str(e)}")
+
+# Function to perform key exchange
+def compute_key_exchange():
+    try:
+        v0 = int(entry_v0.get())
+        a = int(entry_a.get())
+        b = int(entry_b.get())
+        mod = int(entry_mod.get())
+
+        if not is_prime(mod):
+            messagebox.showerror("Invalid Modulus", "Please enter a prime number for security.")
+            return
+
+        vA = traverse(v0, a, mod)
+        vB = traverse(v0, b, mod)
+
+        K_Alice = traverse(vB, a, mod)
+        K_Bob = traverse(vA, b, mod)
+
+        if K_Alice != K_Bob:
+            messagebox.showerror("Key Mismatch", "Shared keys do not match!")
+            return
+
+        shared_key = K_Alice
+
+        label_vA_value.config(text=str(vA))
+        label_vB_value.config(text=str(vB))
+        label_shared_key_value.config(text=str(shared_key))
+
+    except ValueError:
+        messagebox.showerror("Input Error", "Please enter valid integer values!")
+
+# Create the Tkinter GUI
+root = tk.Tk()
+root.title("Ananta-Graph Encryption & Decryption")
+
+# Labels and Entry Fields
+tk.Label(root, text="Public Base Node (v0):").grid(row=0, column=0, padx=10, pady=5)
+entry_v0 = tk.Entry(root)
+entry_v0.grid(row=0, column=1, padx=10, pady=5)
+
+tk.Label(root, text="Modulus (Prime Number):").grid(row=1, column=0, padx=10, pady=5)
+entry_mod = tk.Entry(root)
+entry_mod.grid(row=1, column=1, padx=10, pady=5)
+
+tk.Label(root, text="Alice's Private Key (a):").grid(row=2, column=0, padx=10, pady=5)
+entry_a = tk.Entry(root)
+entry_a.grid(row=2, column=1, padx=10, pady=5)
+
+tk.Label(root, text="Bob's Private Key (b):").grid(row=3, column=0, padx=10, pady=5)
+entry_b = tk.Entry(root)
+entry_b.grid(row=3, column=1, padx=10, pady=5)
+
+tk.Label(root, text="Message to Encrypt:").grid(row=4, column=0, padx=10, pady=5)
+entry_message = tk.Entry(root)
+entry_message.grid(row=4, column=1, padx=10, pady=5)
+
+btn_compute = tk.Button(root, text="Compute Key Exchange", command=compute_key_exchange)
+btn_compute.grid(row=5, column=0, columnspan=2, pady=10)
+
+# Results
+tk.Label(root, text="Alice's Public Key (vA):").grid(row=6, column=0, padx=10, pady=5)
+label_vA_value = tk.Label(root, text="-", fg="blue", font=("Arial", 10))
+label_vA_value.grid(row=6, column=1, padx=10, pady=5)
+
+tk.Label(root, text="Bob's Public Key (vB):").grid(row=7, column=0, padx=10, pady=5)
+label_vB_value = tk.Label(root, text="-", fg="blue", font=("Arial", 10))
+label_vB_value.grid(row=7, column=1, padx=10, pady=5)
+
+tk.Label(root, text="Shared Secret Key:").grid(row=8, column=0, padx=10, pady=5)
+label_shared_key_value = tk.Label(root, text="-", fg="blue", font=("Arial", 10))
+label_shared_key_value.grid(row=8, column=1, padx=10, pady=5)
+
+# Encrypt and Decrypt Buttons
+btn_encrypt = tk.Button(root, text="Encrypt Message", command=encrypt_message)
+btn_encrypt.grid(row=9, column=0, pady=10)
+
+btn_decrypt = tk.Button(root, text="Decrypt Message", command=decrypt_message)
+btn_decrypt.grid(row=9, column=1, pady=10)
+
+# Encryption and Decryption Results
+tk.Label(root, text="Encrypted Message:").grid(row=10, column=0, padx=10, pady=5)
+label_encrypted_value = tk.Label(root, text="-", fg="red", font=("Arial", 10))
+label_encrypted_value.grid(row=10, column=1, padx=10, pady=5)
+
+tk.Label(root, text="Decrypted Message:").grid(row=11, column=0, padx=10, pady=5)
+label_decrypted_value = tk.Label(root, text="-", fg="green", font=("Arial", 10))
+label_decrypted_value.grid(row=11, column=1, padx=10, pady=5)
+
+# Run the Tkinter main loop
+root.mainloop()
