@@ -1,0 +1,158 @@
+import sys
+import json
+import os
+from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QLineEdit,
+                             QTextEdit, QPushButton, QVBoxLayout, QHBoxLayout,
+                             QMessageBox, QGridLayout, QGroupBox, QSpinBox)
+
+def collatz(n, iterations):
+    """Applies the Collatz sequence multiple times."""
+    for _ in range(iterations):
+        n = n // 2 if n % 2 == 0 else 3 * n + 1
+    return n
+
+class EncryptionApp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Collatz Encryption/Decryption")
+        self.initUI()
+
+    def initUI(self):
+        # Input Group
+        input_group = QGroupBox("Input")
+        key_label = QLabel("Encryption Key:")
+        self.key_entry = QLineEdit()
+        plaintext_label = QLabel("Plaintext:")
+        self.plaintext_entry = QTextEdit()
+        iterations_label = QLabel("Iterations:")
+        self.iterations_spinbox = QSpinBox()
+        self.iterations_spinbox.setMinimum(1)
+        self.iterations_spinbox.setMaximum(100) #Set Maximum value for iterations
+        self.iterations_spinbox.setValue(5)  # Set default value
+
+        input_layout = QGridLayout()
+        input_layout.addWidget(key_label, 0, 0)
+        input_layout.addWidget(self.key_entry, 0, 1)
+        input_layout.addWidget(plaintext_label, 1, 0)
+        input_layout.addWidget(self.plaintext_entry, 1, 1)
+        input_layout.addWidget(iterations_label, 2, 0)
+        input_layout.addWidget(self.iterations_spinbox, 2, 1)
+        input_group.setLayout(input_layout)
+
+        # Output Group
+        output_group = QGroupBox("Output")
+        ciphertext_label = QLabel("Ciphertext:")
+        self.ciphertext_text = QTextEdit()
+        self.ciphertext_text.setReadOnly(True)
+        decrypt_key_label = QLabel("Decryption Key:")
+        self.decrypt_key_entry = QLineEdit()
+        deciphered_label = QLabel("Deciphered Text:")
+        self.deciphered_text = QTextEdit()
+        self.deciphered_text.setReadOnly(True)
+        output_layout = QGridLayout()
+        output_layout.addWidget(ciphertext_label, 0, 0)
+        output_layout.addWidget(self.ciphertext_text, 0, 1)
+        output_layout.addWidget(decrypt_key_label, 1, 0)
+        output_layout.addWidget(self.decrypt_key_entry, 1, 1)
+        output_layout.addWidget(deciphered_label, 2, 0)
+        output_layout.addWidget(self.deciphered_text, 2, 1)
+        output_group.setLayout(output_layout)
+
+        # Buttons
+        encrypt_button = QPushButton("Encrypt")
+        encrypt_button.clicked.connect(self.encrypt)
+        decrypt_button = QPushButton("Decrypt")
+        decrypt_button.clicked.connect(self.decrypt)
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(encrypt_button)
+        button_layout.addWidget(decrypt_button)
+
+        # Main Layout
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(input_group)
+        main_layout.addWidget(output_group)
+        main_layout.addLayout(button_layout)
+        self.setLayout(main_layout)
+
+    def encrypt(self):
+        try:
+            key = int(self.key_entry.text())
+        except ValueError:
+            QMessageBox.critical(self, "Error", "Invalid key. Please enter an integer.")
+            return
+
+        plaintext = self.plaintext_entry.toPlainText()
+        if not plaintext:
+            QMessageBox.warning(self, "Warning", "Please enter some text to encrypt.")
+            return
+
+        iterations = self.iterations_spinbox.value()
+
+        encrypted_data = {}
+        ciphertext = ""
+        for i, char in enumerate(plaintext):
+            char_val = ord(char)
+            transformed_val = char_val + key
+            collatz_val = collatz(transformed_val, iterations) #Pass iterations to collatz func
+            ciphertext += str(collatz_val)
+            encrypted_data[i] = {"original": char, "key": key}
+
+        self.ciphertext_text.setPlainText(ciphertext[:-1])
+
+        try:
+            with open("encrypted_data.json", "w") as f:
+                json.dump(encrypted_data, f, indent=4)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error saving encrypted data: {e}")
+
+        self.deciphered_text.clear()
+
+    def decrypt(self):
+        try:
+            decrypt_key = int(self.decrypt_key_entry.text())
+        except ValueError:
+            QMessageBox.critical(self, "Error", "Invalid decryption key. Please enter an integer.")
+            return
+
+        try:
+            with open("encrypted_data.json", "r") as f:
+                encrypted_data = json.load(f)
+        except FileNotFoundError:
+            QMessageBox.critical(self, "Error", "No encrypted data found. Encrypt first.")
+            return
+        except json.JSONDecodeError:
+            QMessageBox.critical(self, "Error", "Invalid encrypted data file. It may be corrupted")
+            return
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error loading encrypted data: {e}")
+            return
+
+        plaintext = ""
+        for i in sorted(encrypted_data.keys(), key=int):
+            try:
+                stored_key = encrypted_data[str(i)]["key"]
+                original_char = encrypted_data[str(i)]["original"]
+                if decrypt_key != stored_key:
+                    QMessageBox.critical(self, "Error", "Decryption failed. Incorrect key.")
+                    self.deciphered_text.clear()
+                    return
+                plaintext += original_char
+            except KeyError:
+                QMessageBox.critical(self, "Error", "Encrypted data is corrupted. Decryption cannot continue.")
+                self.deciphered_text.clear()
+                return
+
+        self.deciphered_text.setPlainText(plaintext)
+
+        try:
+            os.remove("encrypted_data.json")
+        except OSError as e:
+            QMessageBox.warning(self, "Warning", f"Could not delete encrypted data file: {e}")
+        except FileNotFoundError:
+            pass  # File already deleted
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    ex = EncryptionApp()
+    ex.show()
+    sys.exit(app.exec_())
