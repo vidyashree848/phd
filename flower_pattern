@@ -1,0 +1,72 @@
+import numpy as np
+import tkinter as tk
+from tkinter import messagebox
+from bokeh.plotting import figure, show
+from bokeh.models import ColumnDataSource
+from bokeh.layouts import column
+import networkx as nx
+import matplotlib.pyplot as plt
+def twos_complement(n):
+if n < 0:
+return 2**8 + n
+else:
+return n
+def collatz_conjecture(n):
+sequence = [n]
+while n != 1:
+if n % 2 == 0:
+n = n // 2
+else:
+n = 3 * n + 1
+sequence.append(n)
+return sequence
+def generate_flower_pattern(n):
+n = twos_complement(n)
+sequence = collatz_conjecture(n)
+num_steps = len(sequence)
+theta = np.linspace(0, 2*np.pi, num_steps)
+r = np.array(sequence)
+x = r * np.cos(theta)
+y = r * np.sin(theta)
+# Create Bokeh plot
+source = ColumnDataSource(data=dict(x=x, y=y))
+p = figure(title="Flower Pattern for Collatz Conjecture", width=800,
+height=600)
+p.line('x', 'y', source=source, line_width=2, line_color="purple")
+p.circle('x', 'y', source=source, size=8, color="orange", alpha=0.6)
+show(column(p))
+# Create tree structure
+G = nx.DiGraph()
+for i in range(len(sequence) - 1):
+G.add_edge(sequence[i], sequence[i+1])
+# Plot tree structure
+pos = nx.spring_layout(G)
+plt.figure(figsize=(8, 6))
+nx.draw(G, pos, with_labels=True, node_size=2000,
+node_color="lightblue", font_size=10)
+plt.title("Collatz Sequence Tree Structure")
+plt.show()
+return sequence, G
+def generate_pattern():
+try:
+num = int(entry.get())
+sequence, tree_structure = generate_flower_pattern(num)
+sequence_label.config(text="Collatz Sequence: " + ",
+".join(map(str, sequence)))
+except ValueError:
+messagebox.showerror("Error", "Please enter a valid integer")
+# Create GUI
+root = tk.Tk()
+root.title("Flower Pattern Generator")
+frame = tk.Frame(root)
+frame.pack(pady=20)
+label = tk.Label(frame, text="Enter a number:")
+label.grid(row=0, column=0)
+entry = tk.Entry(frame)
+entry.grid(row=0, column=1)
+button = tk.Button(frame, text="Generate Flower Pattern",
+command=generate_pattern)
+button.grid(row=1, columnspan=2)
+sequence_label = tk.Label(root, text="")
+sequence_label.pack()
+root.mainloop()
