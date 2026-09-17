@@ -1,0 +1,54 @@
+import matplotlib.pyplot as plt
+import time
+
+def collatz_step(n):
+    """Computes the next step in the Collatz sequence."""
+    return n // 2 if n % 2 == 0 else 3 * n + 1
+
+def simulate_rendezvous(start_A, start_B, max_steps=100):
+    """Simulates two players following a Collatz-based movement strategy to rendezvous."""
+    pos_A, pos_B = start_A, start_B
+    history_A, history_B = [pos_A], [pos_B]
+    start_time = time.time()
+
+    for step in range(max_steps):
+        if pos_A == 1 and pos_B == 1:
+            duration = time.time() - start_time
+            return step, history_A, history_B, duration  # Stop if both reach 1
+    
+        if pos_A != 1:
+            pos_A = collatz_step(pos_A)
+        if pos_B != 1:
+            pos_B = collatz_step(pos_B)
+    
+        history_A.append(pos_A)
+        history_B.append(pos_B)
+    
+        if pos_A == pos_B:
+            duration = time.time() - start_time
+            return step + 1, history_A, history_B, duration  # They meet
+
+    duration = time.time() - start_time
+    return -1, history_A, history_B, duration  # No meeting within max_steps
+    
+# Manual input for starting positions
+start_A = int(input("Enter starting position for Player A: "))
+start_B = int(input("Enter starting position for Player B: "))
+
+steps, path_A, path_B, duration = simulate_rendezvous(start_A, start_B)
+
+# Plot the paths
+plt.figure(figsize=(8,5))
+plt.plot(path_A, label="Player A", marker='o')
+plt.plot(path_B, label="Player B", marker='s')
+plt.xlabel("Time Step")
+plt.ylabel("Position")
+plt.title("Collatz-Based Rendezvous Simulation")
+plt.legend()
+plt.grid()
+plt.show()
+
+if steps != -1:
+    print(f"Players met after {steps} steps!")
+else:
+    print("Players did not meet within the maximum steps.")
